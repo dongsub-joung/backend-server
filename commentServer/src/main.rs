@@ -10,6 +10,17 @@ pub mod service {
 
     use super::*;
 
+    pub fn removing(post_id: i32){
+        use self::schema::comm::dsl::*;
+
+        let connection = &mut establish_connection();
+
+        let num_deleted = diesel::delete(comm.filter(id.eq(post_id)))
+            .execute(connection)
+            .expect("Error deleting posts");
+    
+    }
+
     pub fn show_post() -> Vec<Post> {
         use self::schema::comm::dsl::*;
 
@@ -123,18 +134,21 @@ async fn comment_getter(path: web::Path<i32>) -> impl Responder {
     HttpResponse::Ok().body(json_response)
 }
 
+#[get("/comment/remove/{id}")]
+async fn comment_remove(path: web::Path<i32>) -> impl Responder {
+    let _ = service::removing(path.into_inner());
+
+    // Return the JSON response in the HttpResponse
+    HttpResponse::Ok().body("Removed")
+}
+
 use actix_cors::Cors;
-use actix_web::http::header;
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
-        let cors = Cors::default()
-    .allowed_origin("https://myapp-api.ngrok.dev/comment/all'")
-    .allowed_methods(vec!["GET", "POST"])
-    .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
-    .allowed_header(header::CONTENT_TYPE)
-    .max_age(3600);
+        let cors = Cors::permissive();
         App::new()
             .wrap(cors)
             .service(hello)
@@ -142,6 +156,7 @@ async fn main() -> std::io::Result<()> {
             .service(comment_list_up)
             .service(comment_getter)
             .service(comment_update)
+            .service(comment_remove)
     })
     .bind(("127.0.0.1", 7080))?
     .run()
