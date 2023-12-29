@@ -1,5 +1,5 @@
 use actix_cors::Cors;
-use actix_web::{get, post, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, App, web, HttpResponse, HttpServer, Responder};
 use diesel::{prelude::*, result::Error};
 use serde_json;
 
@@ -41,12 +41,12 @@ pub mod service {
         results
     }
 
-    pub fn todo_remove(pattern: String) {
+    pub fn todo_remove(_id: i32) {
         use self::schema::todos::dsl::*;
 
         let connection = &mut establish_connection();
 
-        diesel::delete(todos.filter(todotext.like(pattern)))
+        diesel::delete(todos.filter(id.eq(_id)))
             .execute(connection)
             .expect("Error deleting posts");
     }
@@ -59,16 +59,29 @@ async fn todo_add(body_text: String) -> impl Responder {
     HttpResponse::Ok().body(code.expect("ERR_ADD"))
 }
 
-#[post("/todo/remove")]
-async fn todo_remove(target: String) -> impl Responder {
-    let target= &target[80..90];
-    let pattern = format!("%{}%", target);
-
-    
-    service::todo_remove(pattern);
+#[get("/todo/remove/{_id}")]
+async fn todo_remove(_id: web::Path<(i32,)>) -> impl Responder {
+    let _id= _id.into_inner().0;
+    service::todo_remove(_id);
 
     HttpResponse::Ok().body("Successed remove")
 }
+
+#[post("/todo/per/remove")]
+async fn todo_remove_invi_value(mut _id: String) -> impl Responder {
+    if _id.contains("\r") || _id.contains("\n"){
+        let first= _id.find("\r\n").expect("find frist err");
+        // let end= _id.find("\n").expect("find end err");
+        _id= (&_id[first..]).to_string();
+    }
+
+    let _id: i32= _id.trim().trim_end().parse().unwrap();
+
+    service::todo_remove(_id);
+
+    HttpResponse::Ok().body("Successed remove")
+}
+
 
 #[get("/todos")]
 async fn todo_list_up() -> impl Responder {
@@ -89,6 +102,7 @@ async fn main() -> std::io::Result<()> {
             .service(todo_add)
             .service(todo_remove)
             .service(todo_list_up)
+            .service(todo_remove_invi_value)
     })
     .bind(("127.0.0.1", 7081))?
     .run()
