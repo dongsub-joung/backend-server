@@ -8,12 +8,14 @@ use crate::schema::todoss;
 #[derive(Serialize, Deserialize)]
 pub struct Todo {
     pub id: i32,
+    pub user_id: String,
     pub todotext: String,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = todoss)]
 pub struct NewTodo<'a> {
+    pub user_id: &'a str,
     pub todotext: &'a str,
 }
 
@@ -26,14 +28,14 @@ use crate::schema::commss;
 #[derive(Serialize, Deserialize)]
 pub struct Post {
     pub id: i32,
-    pub uuid: String,
+    pub user_id: String,
     pub in_body: String,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = commss)]
 pub struct NewPost<'a> {
-    pub uuid: &'a str,
+    pub user_id: &'a str,
     pub in_body: &'a str,
 }
 
